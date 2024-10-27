@@ -1,46 +1,43 @@
 import java.util.ArrayList;
 import java.util.Scanner;
 
-public class AgricultureManagementSystem
+public class AgricultureManagementSystem 
 {
-    public static Admin admin;
+    public static Admin<Farmer> admin;
 
     public static void main(String[] args) 
     {
-        admin = new Admin();
-        admin.sendUpdate(new Subsidy("Discount on seends for bottom 5% earning farmers", 20, 5));
+        try 
+        {
+            admin = new Admin<>();
+            admin.sendUpdate(new Subsidy("Discount on seeds for bottom 5% earning farmers", 20, 5));
+        } 
+        catch (InsufficientDataException | UpdateException e) { System.out.println(e.getMessage()); }
     }
 }
 
-/*
-TODO: real time data
-- possible implementation: create a thread that periodically updates the weather, market prices and crop recommendations (maybe every 15 seconds)
-- when it updates the data, it randomly generates new data
+class InsufficientDataException extends Exception { InsufficientDataException(String msg) { super(msg); } }
 
-TODO: input output
-- the code to input all the farmer details is in the Admin constructor
-- the user must be able to call the functions marked by ~, maybe by a menu driven interface
+class UpdateException extends Exception { UpdateException(String msg) { super(msg); } }
 
-TODO (optional): exception handling
-- just put some try-catch block somewhere idk
-
-change the implementation idea and the code if you think there's a better way
-*/
-
-class Update
+class Update<T> 
 {
-    String updateContent;
-    
-    Update(String updateContent) { this.updateContent = updateContent; }
-    
-    public void print() { System.out.println(updateContent); } 
+    T updateContent;
+
+    Update(T updateContent) throws InsufficientDataException 
+    {
+        if (updateContent == null) throw new InsufficientDataException("Update content cannot be null.");
+        this.updateContent = updateContent;
+    }
+
+    public void print() { System.out.println(updateContent); }
 }
 
-class Subsidy extends Update
+class Subsidy extends Update<String> 
 {
     float waiver, coverage;
 
-    Subsidy(String updateContent, float waiver, float coverage)
+    Subsidy(String updateContent, float waiver, float coverage) throws InsufficientDataException 
     {
         super(updateContent);
         this.waiver = waiver;
@@ -48,30 +45,31 @@ class Subsidy extends Update
     }
 
     @Override
-    public void print() { System.out.println(updateContent + "Waiver : " + waiver + " Coverage : " + coverage); }
+    public void print() { System.out.println(updateContent + " Waiver: " + waiver + " Coverage: " + coverage); }
 }
 
-class Scheme extends Update
+class Scheme extends Update<String> 
 {
     float coverage;
 
-    Scheme(String updateContent, float coverage)
+    Scheme(String updateContent, float coverage) throws InsufficientDataException 
     {
         super(updateContent);
         this.coverage = coverage;
     }
 
     @Override
-    public void print() { System.out.println(updateContent + " Coverage : " + coverage); }
+    public void print() { System.out.println(updateContent + " Coverage: " + coverage); }
 }
 
-class Request extends Update
+class Request extends Update<String> 
 {
     String farmerName;
 
-    Request(String updateContent, String farmerName)
+    Request(String updateContent, String farmerName) throws InsufficientDataException 
     {
         super(updateContent);
+        if (farmerName == null || farmerName.isEmpty()) throw new InsufficientDataException("Farmer name cannot be null or empty.");
         this.farmerName = farmerName;
     }
 
@@ -79,137 +77,119 @@ class Request extends Update
     public void print() { System.out.println(updateContent + ": request by " + farmerName); }
 }
 
-class Farmer
+class Farmer 
 {
     String name;
-    String[] crops;
+    ArrayList<String> crops;
+    Update<?> update = null;
 
-    Update update = null;
-
-    Farmer(String name, String[] crops) 
-    { 
-        this.name = name; 
+    Farmer(String name, ArrayList<String> crops) throws InsufficientDataException 
+    {
+        if (name == null || name.isEmpty()) throw new InsufficientDataException("Farmer name cannot be null or empty.");
+        if (crops == null || crops.isEmpty()) throw new InsufficientDataException("Crops cannot be null or empty.");
+        this.name = name;
         this.crops = crops;
     }
-    
-    public void receiveUpdate()
-    {
-        if(update == null) return;
 
-        System.out.println(this.name + " recieved update : ");
+    public void receiveUpdate() throws UpdateException 
+    {
+        if (update == null) throw new UpdateException("No update available for farmer " + name);
+        System.out.println(this.name + " received update: ");
         update.print();
         update = null;
     }
 
-    public void sendRequest(String s)   //~
+    public void sendRequest(String s) 
     {
-        Request request = new Request(s, name);
-        AgricultureManagementSystem.admin.logRequest(request);
+        try 
+        {
+            Request request = new Request(s, name);
+            AgricultureManagementSystem.admin.logRequest(request);
+        } 
+        catch (InsufficientDataException e) { System.out.println("Error sending request: " + e.getMessage()); }
     }
 }
 
-class Admin
+class Admin<T extends Farmer> 
 {
-    private Farmer userBase[];
-    private ArrayList<Request> requestList = new ArrayList<Request>();
+    private ArrayList<T> userBase;
+    private ArrayList<Request> requestList;
 
-    Admin()
+    Admin() throws InsufficientDataException 
     {
         Scanner sc = new Scanner(System.in);
+        userBase = new ArrayList<>();
+        requestList = new ArrayList<>();
 
-        //prompt user for n value
+        System.out.println("Enter number of farmers:");
         int n = sc.nextInt();
-        userBase = new Farmer[n];
-        //prompt user for farmer details in every iteration
-        for(int i = 0; i < n; i++) 
+        sc.nextLine();
+
+        for (int i = 0; i < n; i++) 
         {
-            //promt user for name
-            String name = null; // = sc.nextLine(); (null is just a placeholder)
-            //prompt user to enter number of crops
-            int c = 1; // = sc.nextInt(); (1 is just a placeholder)
-            //prompt user to enter crops
-            String crops[] = new String[c];
-            //for(int j = 0; j < c; j++) crops[j] = sc.nextLine();
-            userBase[i] = new Farmer(name, crops);
+            System.out.println("Enter farmer name:");
+            String name = sc.nextLine();
+
+            System.out.println("Enter number of crops:");
+            int c = sc.nextInt();
+            sc.nextLine();
+
+            ArrayList<String> crops = new ArrayList<>();
+            System.out.println("Enter crops:");
+            for (int j = 0; j < c; j++) {
+                crops.add(sc.nextLine());
+            }
+
+            userBase.add((T) new Farmer(name, crops));
         }
+        sc.close();
     }
 
-    public void sendUpdate(Update u)
+    public void sendUpdate(Update<?> u) throws UpdateException 
     {
-        for(Farmer f : userBase) f.update = u;
-        for(Farmer f : userBase) f.receiveUpdate();
+        if (userBase.isEmpty()) throw new UpdateException("No farmers to send updates to.");
+        for (T f : userBase) f.update = u;
+        for (T f : userBase) f.receiveUpdate();
     }
 
     public void logRequest(Request r) { requestList.add(r); }
 
-    class CropTracker
+    class CropTracker<K> 
     {
-        String crop;
+        K crop;
         int count = 1;
 
-        CropTracker(String crop) { this.crop = crop; }
+        CropTracker(K crop) { this.crop = crop; }
 
         void increment() { count++; }
 
-        boolean equals(String crop)
-        {
-            if(this.crop.equalsIgnoreCase(crop)) return true;
-            return false;
-        }
+        boolean equalsTo(K crop) { return this.crop.toString().equalsIgnoreCase(crop.toString()); }
     }
-    
-    public void printCropProductionDetails()        //~
+
+    public void printCropProductionDetails() 
     {
-        ArrayList<CropTracker> cropList = new ArrayList<CropTracker>();
-        for(Farmer f : userBase)
-            for(String crop : f.crops)
+        ArrayList<CropTracker<String>> cropList = new ArrayList<>();
+        
+        for (T f : userBase) 
+        {
+            for (String crop : f.crops) 
             {
                 boolean cropExists = false;
-                for(CropTracker cropTracker : cropList)
+                for (CropTracker<String> cropTracker : cropList) 
                 {
-                    if(cropTracker.equals(crop)) 
+                    if (cropTracker.equalsTo(crop)) 
                     {
                         cropTracker.increment();
                         cropExists = true;
                         break;
                     }
                 }
-                if(!cropExists) cropList.add(new CropTracker(crop));
+                if (!cropExists) { cropList.add(new CropTracker<>(crop)); }
             }
-        
-        for(CropTracker cropTracker : cropList) System.out.println(cropTracker.crop + ": " + cropTracker.count);
-    }
-    
-    public void printRequests() { for(Request r : requestList) r.print(); }       //~
+        }
 
-    /*
-    public void printRealTimeData() //~
-    {
-        realTimeData.printWeatherForecast();
-        realTimeData.printMarketPrices();
-        realTimeData.printCropRecommendations();
+        for (CropTracker<String> cropTracker : cropList) { System.out.println(cropTracker.crop + ": " + cropTracker.count); }
     }
-    */
+
+    public void printRequests() { for (Request r : requestList) r.print(); }
 }
-
-/* 
-class RealTimeData
-{
-    details at the top
-
-    static void printWeatherForecast()
-    {
-        print weather forecast
-    }
-
-    static void printMarketPrices()
-    {
-        print market prices
-    }
-
-    static void printCropRecommendations()
-    {
-        print crop recommendations
-    }
-}
-*/
