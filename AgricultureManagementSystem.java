@@ -193,3 +193,44 @@ class Admin<T extends Farmer>
 
     public void printRequests() { for (Request r : requestList) r.print(); }
 }
+
+class RealTimeData implements Runnable
+{
+    private Random random = new Random();
+
+    private String getWeatherForecast()
+    {
+        String[] forecasts = {"Sunny", "Rainy", "Cloudy", "Windy", "Stormy"};
+        return forecasts[random.nextInt(forecasts.length)];
+    }
+
+    private String getMarketPrices()
+    {
+        String[] prices = {"Wheat: 16000 rs/ton", "Rice: $14000 rs/ton", "Corn: 12000 rs/ton", "Barley: 12500 rs/ton"};
+        return prices[random.nextInt(prices.length)];
+    }
+
+    private String getCropRecommendations()
+    {
+        String[] recommendations = {"Plant Wheat", "Plant Rice", "Plant Corn", "Plant Barley"};
+        return recommendations[random.nextInt(recommendations.length)];
+    }
+
+    @Override
+    public void run()
+    {
+        while (true)
+        {
+            try
+            {
+                Thread.sleep(15000);
+
+                System.out.println("\n[Real-Time Data Updates]");
+                System.out.println("Weather Forecast: " + getWeatherForecast());
+                System.out.println("Market Prices: " + getMarketPrices());
+                System.out.println("Crop Recommendations: " + getCropRecommendations());
+            }
+            catch (InterruptedException e) { System.out.println("Real-time data update interrupted."); }
+        }
+    }
+}
