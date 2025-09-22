@@ -1,3 +1,5 @@
+//final code
+
 package application;
 import javafx.application.*;
 import javafx.scene.control.*;
@@ -295,4 +297,5 @@ class RealTimeData implements Runnable {
             catch (InterruptedException e) { outputArea.appendText("ERROR: SYSTEM DOWN\n"); }
         }
     }
+
 } 
